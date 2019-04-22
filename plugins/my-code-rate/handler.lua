@@ -1,7 +1,8 @@
-local BasePlugin = require "kong.plugins.base_plugin"
 local js = require "cjson"
+local BasePlugin = require "kong.plugins.base_plugin"
 
 local logerr = kong.log.err
+local format = string.format
 
 local MyCodeRateHandler = BasePlugin:extend()
 
@@ -13,21 +14,22 @@ function MyCodeRateHandler:new()
 end
 
 local function get_conf_key(username, typ)
-  local span_key = string.format("my_code_rate_conf:span:%s:%s", username, typ)
-  local max_key  = string.format("my_code_rate_conf:max:%s:%s", username, typ)
+  local span_key = format("my_code_rate_conf:span:%s:%s", username, typ)
+  local max_key  = format("my_code_rate_conf:max:%s:%s", username, typ)
   return span_key, max_key
 end
 
 local function get_rate_key(username, typ, span)
   local now = ngx.time()
   local period = math.floor(now/span)
-  return string.format("my_code_rate:%s:%s:%s:%s", username, typ, span, period)
+  return format("my_code_rate:%s:%s:%s:%s", username, typ, span, period)
 end
 
 local function get_user_conf(username, typ)
+  local cache = kong.cache
   local span_key, max_key = get_conf_key(username, typ)
-  local _, _, span = kong.cache:probe(span_key)
-  local _, _, max_count = kong.cache:probe(max_key)
+  local _, _, span = cache:probe(span_key)
+  local _, _, max_count = cache:probe(max_key)
 
   if not (type(span) == "number" and type(max_count) == "number") then
     return
@@ -49,15 +51,16 @@ function MyCodeRateHandler:access(conf)
     return
   end
 
-  kong.log.err("--------- -> my code rate in --------", js.encode({username, typ }))
+  --logerr("--------- -> my code rate in --------", js.encode({username, typ }))
 
   local span, max_count = get_user_conf(username, typ)
   if not span then
     return
   end
 
+  local cache = kong.cache
   local rate_key = get_rate_key(username, typ, span)
-  local _, _, count = kong.cache:probe(rate_key)
+  local _, _, count = cache:probe(rate_key)
   if type(count) ~= "number" then
     return
   end
@@ -71,7 +74,9 @@ end
 
 function MyCodeRateHandler:header_filter(conf)
   MyCodeRateHandler.super.header_filter(self)
-  kong.log.err("--------- <- my code rate out --------")
+
+  --logerr("--------- <- my code rate out --------")
+
   local s = kong.service.response.get_header("X-Internal-Code-Rate")  -- {username, type, span, max}
   if not s then
     return
@@ -86,17 +91,17 @@ function MyCodeRateHandler:header_filter(conf)
   local span_key, max_key = get_conf_key(username, typ)
   local old_span, old_max = get_user_conf(username, typ)
   if not (old_span == span and old_max == max) then
-    kong.cache:invalidate_local(max_key)
-    kong.cache:invalidate_local(span_key)
+    cache:invalidate_local(max_key)
+    cache:invalidate_local(span_key)
 
-    kong.cache:get(max_key, {ttl = 0}, function() return conf.max end)
-    kong.cache:get(span_key, {ttl = 0}, function() return conf.span end)
+    cache:get(max_key, {ttl = 0}, function() return conf.max end)
+    cache:get(span_key, {ttl = 0}, function() return conf.span end)
   end
 
   local rate_key = get_rate_key(username, typ, span)
-  local _, _, count = kong.cache:probe(rate_key)
-  kong.cache:invalidate_local(rate_key)
-  kong.cache:get(rate_key, {ttl = span+10}, function() return (count or 0)+1 end)
+  local _, _, count = cache:probe(rate_key)
+  cache:invalidate_local(rate_key)
+  cache:get(rate_key, {ttl = span+10}, function() return (count or 0)+1 end)
 end
 
 return MyCodeRateHandler

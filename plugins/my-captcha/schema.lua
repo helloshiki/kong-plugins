@@ -4,9 +4,15 @@ return {
   name = "my-captcha",
   fields = {
     { protocols = typedefs.protocols_http },
-    { config = {
+    {
+      config = {
         type = "record",
-        fields = {},
-    }, },
+        fields = {
+          { appid = { type = "string", len_min = 0 }, },
+          { secret_key = { type = "string", len_min = 0 }, },
+          { timeout = { type = "number", default = 5000, }, },
+        },
+      },
+    },
   }
 }

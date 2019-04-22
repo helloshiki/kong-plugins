@@ -1,5 +1,5 @@
-local BasePlugin = require "kong.plugins.base_plugin"
 local js = require("cjson")
+local BasePlugin = require "kong.plugins.base_plugin"
 
 local MyRegHandler = BasePlugin:extend()
 

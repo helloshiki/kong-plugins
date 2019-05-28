@@ -3,7 +3,7 @@ local BasePlugin = require "kong.plugins.base_plugin"
 local black = require "kong.plugins.my-black.black"
 
 local re_gmatch = ngx.re.gmatch
-local logerr = kong.log.err
+local logdebug = kong.log.debug
 local logwarn = kong.log.warn
 local jwt_black_key = black.jwt_black_key
 
@@ -39,7 +39,7 @@ end
 -- x-internal-jwt-black
 function MyBlackHandler:access(conf)
   MyBlackHandler.super.access(self)
-  --logerr("--------- -> my black in --------")
+  --logdebug("--------- -> my black in --------")
 
   local token = retrieve_jwt_token()
   if not token then
@@ -63,7 +63,7 @@ end
 -- cache_key = myblack:jwt:$sign
 local function set_jwt_black(s)
   local token = retrieve_jwt_token()
-  if token then
+  if not token then
     return
   end
 
@@ -80,7 +80,9 @@ local set_black_funcs = {
 
 function MyBlackHandler:header_filter(conf)
   MyBlackHandler.super.header_filter(self)
-  --logerr("--------- <- my black out --------")
+
+  --logdebug("--------- <- my black out --------")
+
   for k, f in pairs(set_black_funcs) do
     local s = kong.service.response.get_header(k)
     local _ = s and f(s)

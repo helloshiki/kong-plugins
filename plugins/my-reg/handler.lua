@@ -93,7 +93,6 @@ local upsert_funcs = {
 
 function MyRegHandler:header_filter(conf)
   MyRegHandler.super.header_filter(self)
-
   for k, f in pairs(upsert_funcs) do
     local s = kong.service.response.get_header(k)
     local _ = s and f(s)

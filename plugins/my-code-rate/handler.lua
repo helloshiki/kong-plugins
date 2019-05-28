@@ -87,6 +87,7 @@ function MyCodeRateHandler:header_filter(conf)
     return logerr("invalid conf ", s)
   end
 
+  local cache = kong.cache
   local username, typ, span, max = conf.username, conf.type, conf.span, conf.max
   local span_key, max_key = get_conf_key(username, typ)
   local old_span, old_max = get_user_conf(username, typ)

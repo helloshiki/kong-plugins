@@ -12,7 +12,7 @@ end
 
 function MyStripOutHandler:header_filter(conf)
   MyStripOutHandler.super.header_filter(self)
-  kong.log.err("--------- <- my strip out --------")
+  kong.log.debug("--------- <- my strip out --------")
   local response = kong.response
   local headers = kong.service.response.get_headers()
   for k in pairs(headers) do

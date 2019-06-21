@@ -12,7 +12,7 @@ end
 
 function MyStripInHandler:access(conf)
   MyStripInHandler.super.access(self)
-  kong.log.err("--------- -> my strip in --------")
+  kong.log.debug("--------- -> my strip in --------")
 
   local request = kong.service.request
   local headers = kong.request.get_headers()
